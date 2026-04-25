@@ -529,18 +529,16 @@ async function loadItems(){
   try{
     const rows=await supa('GET','/rest/v1/items?household_id=eq.'+householdId+'&select=id,data');
     if(rows && rows.length > 0){
-      items=rows.map(r=>r.data);
-    } else if(rows && rows.length === 0 && items.length > 0){
-      // Cloud is empty but we have local items — push them up instead of wiping
-      setSyncStatus('busy','Herstellen...');
-      const toUpload=items.map(it=>({id:it.id.toString(),household_id:householdId,data:it,updated_at:new Date().toISOString()}));
-      await supa('POST','/rest/v1/items',toUpload);
-    } else {
-      items=[];
+      // Merge: cloud items win, but keep local items not yet synced
+      const merged={};
+      items.forEach(li=>merged[li.id.toString()]=li);   // start with local
+      rows.forEach(r=>merged[r.data.id.toString()]=r.data); // cloud overrides
+      items=Object.values(merged);
     }
+    // If cloud is empty, keep local items as-is (don't wipe them)
     setSyncStatus('ok',items.length+' items');
     renderAll(); scheduleNotifications();
-  }catch(e){setSyncStatus('err','Offline');renderAll();}
+  }catch(e){setSyncStatus('err','Offline');}
 }
 
 // Save a single item to cloud immediately
@@ -580,7 +578,6 @@ async function deleteAndSync(id){
 }
 
 function save(){
-  // Save all items (for bulk operations like qty change)
   clearTimeout(syncTimer);
   syncTimer=setTimeout(async()=>{
     if(!householdId||!currentSession)return;
@@ -589,8 +586,8 @@ function save(){
       if(items.length){
         const rows=items.map(it=>({id:it.id.toString(),household_id:householdId,data:it,updated_at:new Date().toISOString()}));
         await supa('POST','/rest/v1/items',rows);
+        setSyncStatus('ok','Gesynchroniseerd');
       }
-      setSyncStatus('ok','Gesynchroniseerd');
     }catch(e){setSyncStatus('err','Sync mislukt');}
   },800);
 }
