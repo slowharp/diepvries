@@ -384,6 +384,8 @@ function renderSheetBody(it){
         <option value="90">3 maanden</option><option value="180">6 maanden</option>
         <option value="270">9 maanden</option><option value="365">12 maanden</option>
       </select></div>
+      <div class="field"><label>Foto</label><input type="file" id="s-foto" accept="image/*" style="font-size:13px;padding:8px;color:var(--text2)"></div>
+      <img id="s-foto-preview" class="photo-preview" ${it&&it.foto?'src="'+it.foto+'" style="display:block"':''} />
       <button class="save-btn save-btn-w" onclick="saveSheet('winkel')">${isEdit?'Opslaan':'Toevoegen'}</button>`;
   } else {
     document.getElementById('sheet-body').innerHTML=`
@@ -423,6 +425,14 @@ function renderSheetBody(it){
       });
     }
   }
+  // attach listener for winkel foto too
+  const wFoto=document.getElementById('s-foto');
+  if(wFoto && type==='winkel'){
+    wFoto.addEventListener('change',function(){
+      const f=this.files[0]; if(!f)return;
+      const r=new FileReader(); r.onload=e=>{ const p=document.getElementById('s-foto-preview'); p.src=e.target.result; p.style.display='block'; }; r.readAsDataURL(f);
+    });
+  }
 }
 
 function calcGebruik(){
@@ -437,10 +447,15 @@ async function saveSheet(type){
   if(!naam){ document.getElementById('s-naam').focus(); return; }
   let item;
   if(type==='winkel'){
+    let wFoto='';
+    const wFotoFile=document.getElementById('s-foto').files[0];
+    if(wFotoFile) wFoto=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(wFotoFile); });
+    else{ const prev=document.getElementById('s-foto-preview'); if(prev&&prev.dataset.b64) wFoto=prev.dataset.b64; else if(editId){ const old=items.find(i=>i.id===editId); if(old)wFoto=old.foto||''; } }
     item={ type:'winkel', naam, cat:document.getElementById('s-cat').value,
       qty:parseInt(document.getElementById('s-qty').value)||1,
       eenheid:document.getElementById('s-eenheid').value.trim(),
       barcode:document.getElementById('s-barcode').value.trim(),
+      foto:wFoto,
       invries:document.getElementById('s-invries').value,
       gebruik:document.getElementById('s-gebruik').value };
   } else {
@@ -513,7 +528,23 @@ async function onBarcode(code){
       else if(cats.some(c=>c.includes('bread')||c.includes('brood'))) cat='brood';
       else if(cats.some(c=>c.includes('ice-cream')||c.includes('ijs'))) cat='ijs';
       const elCat=document.getElementById('s-cat'); if(elCat) elCat.value=cat;
-      showBanner('✓ '+(naam||code)+' gevonden!','ok');
+      // Load product image from Open Food Facts
+      const imgUrl=p.image_front_small_url||p.image_front_url||p.image_url||'';
+      if(imgUrl){
+        // Fetch image and convert to base64 so it saves with the product
+        try{
+          const imgResp=await fetch(imgUrl);
+          const blob=await imgResp.blob();
+          const b64=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(blob); });
+          const prev=document.getElementById('s-foto-preview');
+          if(prev){ prev.src=b64; prev.style.display='block'; prev.dataset.b64=b64; }
+          showBanner('✓ '+(naam||code)+' gevonden met foto!','ok');
+        }catch(imgErr){
+          showBanner('✓ '+(naam||code)+' gevonden!','ok');
+        }
+      } else {
+        showBanner('✓ '+(naam||code)+' gevonden!','ok');
+      }
     } else { showBanner('Barcode '+code+' — product niet gevonden, vul naam in','err'); }
   }catch(e){ showBanner('Barcode gescand: '+code,'ok'); }
 }
