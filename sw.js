@@ -1,4 +1,4 @@
-const CACHE = 'diepvries-v2';
+const CACHE = 'diepvries-v3';
 const ASSETS = [
   './index.html',
   './manifest.json',
@@ -22,6 +22,8 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
+  // Never cache external requests (Open Food Facts photos etc.)
+  if (!e.request.url.startsWith(self.location.origin)) return;
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

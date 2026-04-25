@@ -450,7 +450,7 @@ async function saveSheet(type){
     let wFoto='';
     const wFotoFile=document.getElementById('s-foto').files[0];
     if(wFotoFile) wFoto=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(wFotoFile); });
-    else{ const prev=document.getElementById('s-foto-preview'); if(prev&&prev.dataset.b64) wFoto=prev.dataset.b64; else if(editId){ const old=items.find(i=>i.id===editId); if(old)wFoto=old.foto||''; } }
+    else{ const prev=document.getElementById('s-foto-preview'); if(prev&&prev.dataset.url) wFoto=prev.dataset.url; else if(editId){ const old=items.find(i=>i.id===editId); if(old)wFoto=old.foto||''; } }
     item={ type:'winkel', naam, cat:document.getElementById('s-cat').value,
       qty:parseInt(document.getElementById('s-qty').value)||1,
       eenheid:document.getElementById('s-eenheid').value.trim(),
@@ -531,17 +531,9 @@ async function onBarcode(code){
       // Load product image from Open Food Facts
       const imgUrl=p.image_front_small_url||p.image_front_url||p.image_url||'';
       if(imgUrl){
-        // Fetch image and convert to base64 so it saves with the product
-        try{
-          const imgResp=await fetch(imgUrl);
-          const blob=await imgResp.blob();
-          const b64=await new Promise(res=>{ const r=new FileReader(); r.onload=e=>res(e.target.result); r.readAsDataURL(blob); });
-          const prev=document.getElementById('s-foto-preview');
-          if(prev){ prev.src=b64; prev.style.display='block'; prev.dataset.b64=b64; }
-          showBanner('✓ '+(naam||code)+' gevonden met foto!','ok');
-        }catch(imgErr){
-          showBanner('✓ '+(naam||code)+' gevonden!','ok');
-        }
+        const prev=document.getElementById('s-foto-preview');
+        if(prev){ prev.src=imgUrl; prev.style.display='block'; prev.dataset.url=imgUrl; }
+        showBanner('✓ '+(naam||code)+' gevonden met foto!','ok');
       } else {
         showBanner('✓ '+(naam||code)+' gevonden!','ok');
       }
