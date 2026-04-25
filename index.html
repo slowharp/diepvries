@@ -459,6 +459,7 @@ async function supa(method, path, body=null, token=null){
   const r=await fetch(SUPA+path,opts);
   const txt=await r.text();
   let json=null; try{json=JSON.parse(txt);}catch(e){}
+  if(r.status===401||r.status===403){localStorage.removeItem('diepvries-session');showScreen('auth');throw new Error('Sessie verlopen — log opnieuw in');}
   if(!r.ok) throw new Error((json&&(json.error_description||json.msg||json.message||json.error))||txt||r.status);
   return json;
 }
@@ -594,7 +595,7 @@ async function loadItems(){
     // If cloud is empty, keep local items as-is (don't wipe them)
     setSyncStatus('ok',items.length+' items');
     renderAll(); scheduleNotifications();
-  }catch(e){setSyncStatus('err','Offline');}
+  }catch(e){console.error('loadItems:',e.message||e);setSyncStatus('err','Offline: '+(e.message||'?').slice(0,40));renderAll();}
 }
 
 // Save a single item to cloud immediately
@@ -1000,20 +1001,38 @@ function showBanner(msg,type){const el=document.getElementById('banner');if(!el)
 
 // ── Boot ──
 async function boot(){
-  // Try to restore session
   const stored=localStorage.getItem('diepvries-session');
   if(stored){
     try{
       const s=JSON.parse(stored);
-      // Refresh token
-      const refreshed=await supa('POST','/auth/v1/token?grant_type=refresh_token',{refresh_token:s.refresh_token},s.access_token).catch(()=>null);
-      if(refreshed&&refreshed.access_token){
-        currentSession=refreshed; currentUser=refreshed.user;
-        localStorage.setItem('diepvries-session',JSON.stringify(refreshed));
+      // First try using existing token directly
+      currentSession=s; currentUser=s.user;
+      // Verify it still works by fetching user
+      const userCheck=await fetch(SUPA+'/auth/v1/user',{
+        headers:{'apikey':KEY,'Authorization':'Bearer '+s.access_token}
+      });
+      if(userCheck.ok){
+        const u=await userCheck.json();
+        currentUser=u;
         await afterLogin(); return;
       }
-    }catch(e){}
+      // Token expired — try refresh
+      const refreshResp=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
+        method:'POST',
+        headers:{'apikey':KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:s.refresh_token})
+      });
+      if(refreshResp.ok){
+        const refreshed=await refreshResp.json();
+        if(refreshed&&refreshed.access_token){
+          currentSession=refreshed; currentUser=refreshed.user;
+          localStorage.setItem('diepvries-session',JSON.stringify(refreshed));
+          await afterLogin(); return;
+        }
+      }
+    }catch(e){console.error('boot error:',e);}
     localStorage.removeItem('diepvries-session');
+    currentSession=null; currentUser=null;
   }
   showScreen('auth');
 }
