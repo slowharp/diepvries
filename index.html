@@ -58,7 +58,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 #topbar h1{font-size:18px;font-weight:500;flex:1;letter-spacing:-0.3px}
 .hbtn{display:flex;align-items:center;gap:5px;font-size:13px;font-family:var(--font);padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text2);cursor:pointer}
 .hbtn:active{opacity:.7}
-.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(160px,calc(env(safe-area-inset-bottom)+160px))}
+.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(220px,calc(env(safe-area-inset-bottom)+220px))}
 .page.active-page{display:block}
 #bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:6px 4px;padding-bottom:max(6px,env(safe-area-inset-bottom));flex-shrink:0;z-index:50}
 .nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--font);color:var(--text3);background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:var(--radius-sm);transition:color .15s;flex:1}
@@ -116,7 +116,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .unit-lbl{font-size:10px;color:var(--text3)}
 .del-btn{width:26px;height:26px;border:none;background:transparent;color:var(--text3);font-size:14px;cursor:pointer}
 .card-footer{border-top:1px solid var(--border);padding:7px 12px;display:flex;gap:10px;align-items:center}
-.foot-btn{font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:var(--font);padding:0}
+.foot-btn{font-size:13px;color:var(--text2);background:none;border:none;cursor:pointer;font-family:var(--font);padding:6px 4px;min-height:32px}
 .foot-btn:active{color:var(--text)}
 .note-body{padding:9px 12px;font-size:13px;color:var(--text2);line-height:1.55;border-top:1px solid var(--border)}
 .empty{text-align:center;padding:40px 20px;color:var(--text3)}
@@ -368,8 +368,11 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     <div class="settings-section">
       <h3>Laden</h3>
-      <p style="font-size:13px;color:var(--text3);margin-bottom:8px">7 vaste laden beschikbaar per diepvries.</p>
       <div class="tag-list" id="lades-list"></div>
+      <div class="tag-add-row" style="margin-top:8px">
+        <input type="text" id="lade-input" placeholder="bijv. Bovenste lade"/>
+        <button class="tag-add-btn" onclick="addLade()">+ Voeg toe</button>
+      </div>
     </div>
 
     <div class="settings-section">
@@ -669,28 +672,29 @@ setInterval(()=>{if(document.visibilityState==='visible'&&householdId)loadItems(
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&householdId)loadItems();});
 
 // ── Settings ──
-const DEFAULT_LADES=['Lade 1','Lade 2','Lade 3','Lade 4','Lade 5','Lade 6','Lade 7'];
+const DEFAULT_LADES=[];
 function getSettings(){
   try{
-    const s=JSON.parse(localStorage.getItem('diepvries-settings'))||{vriezers:[],lades:DEFAULT_LADES};
-    if(!s.lades||s.lades.length===0)s.lades=DEFAULT_LADES;
+    const s=JSON.parse(localStorage.getItem('diepvries-settings'))||{vriezers:[],lades:[]};
+    if(!s.lades)s.lades=[];
     return s;
-  }catch(e){return{vriezers:[],lades:DEFAULT_LADES};}
+  }catch(e){return{vriezers:[],lades:[]};}
 }
 function saveSettings(s){
   localStorage.setItem('diepvries-settings',JSON.stringify(s));
   // Also save vriezers to Supabase so they sync across devices
   if(householdId&&currentSession){
-    supa('PATCH','/rest/v1/households?id=eq.'+householdId,{vriezers:s.vriezers}).catch(()=>{});
+    supa('PATCH','/rest/v1/households?id=eq.'+householdId,{vriezers:s.vriezers,lades:s.lades}).catch(()=>{});
   }
 }
 async function loadSettingsFromCloud(){
   if(!householdId||!currentSession)return;
   try{
-    const rows=await supa('GET','/rest/v1/households?id=eq.'+householdId+'&select=vriezers');
-    if(rows&&rows.length>0&&rows[0].vriezers){
+    const rows=await supa('GET','/rest/v1/households?id=eq.'+householdId+'&select=vriezers,lades');
+    if(rows&&rows.length>0){
       const s=getSettings();
-      s.vriezers=rows[0].vriezers;
+      if(rows[0].vriezers)s.vriezers=rows[0].vriezers;
+      if(rows[0].lades)s.lades=rows[0].lades;
       localStorage.setItem('diepvries-settings',JSON.stringify(s));
     }
   }catch(e){}
@@ -725,7 +729,7 @@ function copyInviteCode(){
 function renderSettingsTags(){
   const s=getSettings();
   document.getElementById('vriezers-list').innerHTML=s.vriezers.map((v,i)=>`<div class="tag">${v}<button class="tag-del" onclick="removeVriezer(${i})">×</button></div>`).join('');
-  document.getElementById('lades-list').innerHTML=s.lades.map(l=>`<div class="tag">${l}</div>`).join('');
+  document.getElementById('lades-list').innerHTML=s.lades.map((l,i)=>`<div class="tag">${l}<button class="tag-del" onclick="removeLade(${i})">×</button></div>`).join('');
 }
 function addVriezer(){const el=document.getElementById('vries-input');const v=el.value.trim();if(!v)return;const s=getSettings();s.vriezers.push(v);saveSettings(s);el.value='';renderSettingsTags();}
 function removeVriezer(i){const s=getSettings();s.vriezers.splice(i,1);saveSettings(s);renderSettingsTags();}

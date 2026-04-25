@@ -1,4 +1,4 @@
-const CACHE = 'diepvries-v20';
+const CACHE = 'diepvries-v21';
 const ASSETS = [
   './index.html',
   './manifest.json',
