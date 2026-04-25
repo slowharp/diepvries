@@ -431,12 +431,12 @@ async function createHousehold(){
 }
 
 async function joinHousehold(){
-  const code=document.getElementById('hs-invite-code').value.trim().toUpperCase();
+  const code=document.getElementById('hs-invite-code').value.trim();
   const errEl=document.getElementById('hs-err');
   errEl.style.display='none';
   if(!code){errEl.textContent='Voer een uitnodigingscode in.';errEl.style.display='block';return;}
   try{
-    const rows=await supa('GET','/rest/v1/households?invite_code=eq.'+code+'&select=id,name,invite_code');
+    const rows=await supa('GET','/rest/v1/households?invite_code=ilike.'+encodeURIComponent(code)+'&select=id,name,invite_code');
     if(!rows||rows.length===0){errEl.textContent='Code niet gevonden.';errEl.style.display='block';return;}
     const hh=rows[0];
     await supa('POST','/rest/v1/household_members',{household_id:hh.id,user_id:currentUser.id});
