@@ -353,9 +353,26 @@ async function subscribeRealtime(){
       schema: 'public',
       table: 'items',
       filter: 'household_id=eq.'+householdId
-    }, (payload) => {
-      // Another device made a change — reload
-      loadItems();
+    }, async (payload) => {
+      // Handle individual change without full reload
+      if(payload.eventType === 'INSERT' || payload.eventType === 'UPDATE'){
+        // Fetch the specific item that changed
+        try{
+          const rows = await supa('GET','/rest/v1/items?id=eq.'+payload.new.id+'&select=id,data');
+          if(rows && rows.length > 0){
+            const updated = rows[0].data;
+            const idx = items.findIndex(i=>i.id.toString()===payload.new.id.toString());
+            if(idx>=0) items[idx]=updated;
+            else items.push(updated);
+            renderAll(); scheduleNotifications();
+            setSyncStatus('ok','Bijgewerkt');
+          }
+        }catch(e){}
+      } else if(payload.eventType === 'DELETE'){
+        items = items.filter(i=>i.id.toString()!==payload.old.id.toString());
+        renderAll();
+        setSyncStatus('ok','Bijgewerkt');
+      }
     })
     .subscribe((status) => {
       if(status === 'SUBSCRIBED'){
@@ -510,8 +527,17 @@ async function loadItems(){
   if(!householdId)return;
   setSyncStatus('busy','Laden...');
   try{
-    const rows=await supa('GET','/rest/v1/items?household_id=eq.'+householdId+'&select=id,data&order=data->>invries.asc');
-    items=rows.map(r=>r.data);
+    const rows=await supa('GET','/rest/v1/items?household_id=eq.'+householdId+'&select=id,data');
+    if(rows && rows.length > 0){
+      items=rows.map(r=>r.data);
+    } else if(rows && rows.length === 0 && items.length > 0){
+      // Cloud is empty but we have local items — push them up instead of wiping
+      setSyncStatus('busy','Herstellen...');
+      const toUpload=items.map(it=>({id:it.id.toString(),household_id:householdId,data:it,updated_at:new Date().toISOString()}));
+      await supa('POST','/rest/v1/items',toUpload);
+    } else {
+      items=[];
+    }
     setSyncStatus('ok',items.length+' items');
     renderAll(); scheduleNotifications();
   }catch(e){setSyncStatus('err','Offline');renderAll();}
