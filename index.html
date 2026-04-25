@@ -58,7 +58,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 #topbar h1{font-size:18px;font-weight:500;flex:1;letter-spacing:-0.3px}
 .hbtn{display:flex;align-items:center;gap:5px;font-size:13px;font-family:var(--font);padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text2);cursor:pointer}
 .hbtn:active{opacity:.7}
-.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(90px,calc(env(safe-area-inset-bottom)+90px))}
+.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(160px,calc(env(safe-area-inset-bottom)+160px))}
 .page.active-page{display:block}
 #bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:6px 4px;padding-bottom:max(6px,env(safe-area-inset-bottom));flex-shrink:0;z-index:50}
 .nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--font);color:var(--text3);background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:var(--radius-sm);transition:color .15s;flex:1}
@@ -368,11 +368,8 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 
     <div class="settings-section">
       <h3>Laden</h3>
+      <p style="font-size:13px;color:var(--text3);margin-bottom:8px">7 vaste laden beschikbaar per diepvries.</p>
       <div class="tag-list" id="lades-list"></div>
-      <div class="tag-add-row">
-        <input type="text" id="lade-input" placeholder="bijv. Bovenste lade"/>
-        <button class="tag-add-btn" onclick="addLade()">+ Voeg toe</button>
-      </div>
     </div>
 
     <div class="settings-section">
@@ -532,6 +529,7 @@ async function afterLogin(){
     document.getElementById('household-name').textContent=householdName;
     showScreen('app');
     await loadItems();
+    await loadSettingsFromCloud();
     subscribeRealtime();
   }else{
     showScreen('household');
@@ -555,6 +553,7 @@ async function createHousehold(){
     document.getElementById('household-name').textContent=householdName;
     showScreen('app');
     await loadItems();
+    await loadSettingsFromCloud();
     subscribeRealtime();
   }catch(e){errEl.textContent='Fout: '+e.message;errEl.style.display='block';}
 }
@@ -573,6 +572,7 @@ async function joinHousehold(){
     document.getElementById('household-name').textContent=householdName;
     showScreen('app');
     await loadItems();
+    await loadSettingsFromCloud();
     subscribeRealtime();
   }catch(e){errEl.textContent='Fout: '+e.message;errEl.style.display='block';}
 }
@@ -669,8 +669,32 @@ setInterval(()=>{if(document.visibilityState==='visible'&&householdId)loadItems(
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&householdId)loadItems();});
 
 // ── Settings ──
-function getSettings(){try{return JSON.parse(localStorage.getItem('diepvries-settings'))||{vriezers:[],lades:[]};}catch(e){return{vriezers:[],lades:[]};}}
-function saveSettings(s){localStorage.setItem('diepvries-settings',JSON.stringify(s));}
+const DEFAULT_LADES=['Lade 1','Lade 2','Lade 3','Lade 4','Lade 5','Lade 6','Lade 7'];
+function getSettings(){
+  try{
+    const s=JSON.parse(localStorage.getItem('diepvries-settings'))||{vriezers:[],lades:DEFAULT_LADES};
+    if(!s.lades||s.lades.length===0)s.lades=DEFAULT_LADES;
+    return s;
+  }catch(e){return{vriezers:[],lades:DEFAULT_LADES};}
+}
+function saveSettings(s){
+  localStorage.setItem('diepvries-settings',JSON.stringify(s));
+  // Also save vriezers to Supabase so they sync across devices
+  if(householdId&&currentSession){
+    supa('PATCH','/rest/v1/households?id=eq.'+householdId,{vriezers:s.vriezers}).catch(()=>{});
+  }
+}
+async function loadSettingsFromCloud(){
+  if(!householdId||!currentSession)return;
+  try{
+    const rows=await supa('GET','/rest/v1/households?id=eq.'+householdId+'&select=vriezers');
+    if(rows&&rows.length>0&&rows[0].vriezers){
+      const s=getSettings();
+      s.vriezers=rows[0].vriezers;
+      localStorage.setItem('diepvries-settings',JSON.stringify(s));
+    }
+  }catch(e){}
+}
 
 async function openSettings(){
   document.getElementById('s-hs-name').textContent=householdName;
@@ -701,7 +725,7 @@ function copyInviteCode(){
 function renderSettingsTags(){
   const s=getSettings();
   document.getElementById('vriezers-list').innerHTML=s.vriezers.map((v,i)=>`<div class="tag">${v}<button class="tag-del" onclick="removeVriezer(${i})">×</button></div>`).join('');
-  document.getElementById('lades-list').innerHTML=s.lades.map((l,i)=>`<div class="tag">${l}<button class="tag-del" onclick="removeLade(${i})">×</button></div>`).join('');
+  document.getElementById('lades-list').innerHTML=s.lades.map(l=>`<div class="tag">${l}</div>`).join('');
 }
 function addVriezer(){const el=document.getElementById('vries-input');const v=el.value.trim();if(!v)return;const s=getSettings();s.vriezers.push(v);saveSettings(s);el.value='';renderSettingsTags();}
 function removeVriezer(i){const s=getSettings();s.vriezers.splice(i,1);saveSettings(s);renderSettingsTags();}
