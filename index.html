@@ -387,9 +387,9 @@ async function subscribeRealtime(){
     });
 }
 
-const ICONS_W={vlees:'🥩',vis:'🐟',groenten:'🥦',fruit:'🍓',brood:'🍞',ijs:'🍦',overig:'📦'};
+const ICONS_W={vlees:'🥩',vis:'🐟',groenten:'🥦',fruit:'🍓',brood:'🍞',ijs:'🍦',kroketten:'🥔',overig:'📦'};
 const ICONS_B={soep:'🍲',stoofpot:'🥘',pasta:'🍝',rijst:'🍚','vlees-b':'🥩','vis-b':'🐟','groente-b':'🥦',baksel:'🥐','overig-b':'🍽️'};
-const LABELS_W={vlees:'Vlees',vis:'Vis',groenten:'Groenten',fruit:'Fruit',brood:'Brood',ijs:'IJs',overig:'Overig'};
+const LABELS_W={vlees:'Vlees',vis:'Vis',groenten:'Groenten',fruit:'Fruit',brood:'Brood',ijs:'IJs',kroketten:'Kroketten',overig:'Overig'};
 const LABELS_B={soep:'Soep',stoofpot:'Stoofpot',pasta:'Pasta',rijst:'Rijst','vlees-b':'Vleesgerecht','vis-b':'Visgerecht','groente-b':'Groentegerecht',baksel:'Baksel','overig-b':'Overig'};
 
 let items=[], activeTab='winkel', editId=null;
@@ -760,6 +760,7 @@ function renderSheetBody(it){
           <option value="fruit"${it&&it.cat==='fruit'?' selected':''}>🍓 Fruit</option>
           <option value="brood"${it&&it.cat==='brood'?' selected':''}>🍞 Brood</option>
           <option value="ijs"${it&&it.cat==='ijs'?' selected':''}>🍦 IJs</option>
+          <option value="kroketten"${it&&it.cat==='kroketten'?' selected':''}>🥔 Kroketten</option>
           <option value="overig"${it&&it.cat==='overig'?' selected':''}>📦 Overig</option>
         </select></div>
         <div class="field"><label>Aantal</label><input type="number" id="s-qty" value="${it?it.qty:1}" min="1"></div>
