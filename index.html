@@ -58,16 +58,17 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 #topbar h1{font-size:18px;font-weight:500;flex:1;letter-spacing:-0.3px}
 .hbtn{display:flex;align-items:center;gap:5px;font-size:13px;font-family:var(--font);padding:7px 10px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text2);cursor:pointer}
 .hbtn:active{opacity:.7}
-#tabs{display:grid;grid-template-columns:1fr 1fr;flex-shrink:0;background:var(--bg);border-bottom:1px solid var(--border)}
-.tab{padding:11px;font-size:14px;font-family:var(--font);text-align:center;cursor:pointer;background:transparent;color:var(--text3);border:none;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
-.tab.active-w{color:var(--blue);border-bottom-color:var(--blue)}
-.tab.active-b{color:var(--amber);border-bottom-color:var(--amber)}
-#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(120px,calc(env(safe-area-inset-bottom)+120px))}
-#bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:8px}
-#fab{flex:1;padding:13px;font-size:15px;font-weight:500;font-family:var(--font);border:none;border-radius:var(--radius);cursor:pointer}
-.fab-w{background:var(--blue);color:#0f172a}
-.fab-b{background:var(--amber);color:#0f172a}
-.icon-btn{padding:11px 13px;border:1px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text2);cursor:pointer;display:flex;align-items:center;justify-content:center}
+.page{display:none;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(90px,calc(env(safe-area-inset-bottom)+90px))}
+.page.active-page{display:block}
+#bottom-nav{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-around;padding:6px 4px;padding-bottom:max(6px,env(safe-area-inset-bottom));flex-shrink:0;z-index:50}
+.nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-family:var(--font);color:var(--text3);background:none;border:none;cursor:pointer;padding:4px 10px;border-radius:var(--radius-sm);transition:color .15s;flex:1}
+.nav-btn.active{color:var(--blue)}
+.nav-btn svg{flex-shrink:0}
+.nav-center{flex:0 0 auto;padding:0 8px}
+.nav-add-circle{width:48px;height:48px;border-radius:50%;background:var(--blue);display:flex;align-items:center;justify-content:center;color:#0f172a;margin-bottom:0}
+.overview-section{margin-bottom:20px}
+.overview-label{font-size:13px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px}
+.overview-soon-btn{width:100%;padding:9px 12px;font-size:13px;font-family:var(--font);background:var(--amber-bg);color:var(--amber-text);border:1px solid rgba(251,191,36,0.3);border-radius:var(--radius-sm);cursor:pointer;margin-top:8px;text-align:left}
 .stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
 .stat{background:var(--surface);border-radius:var(--radius-sm);padding:10px 13px;border:1px solid var(--border)}
 .stat-label{font-size:11px;color:var(--text3);margin-bottom:2px;text-transform:uppercase;letter-spacing:.05em}
@@ -221,14 +222,28 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
     </button>
   </div>
-  <div id="tabs">
-    <button class="tab active-w" id="tab-w" onclick="switchTab('winkel')">🛒 Winkel</button>
-    <button class="tab" id="tab-b" onclick="switchTab('bereid')">🍳 Bereid</button>
-  </div>
-  <div id="main">
-    <div class="stats" id="stats"></div>
+  <!-- PAGE: Overzicht -->
+  <div id="page-overzicht" class="page active-page">
     <div id="banner" class="banner"></div>
-    <div class="filter-bar" id="filter-bar"></div>
+    <div class="overview-section">
+      <div class="overview-label">🛒 Winkel</div>
+      <div class="stats" id="stats-winkel"></div>
+      <button class="overview-soon-btn" id="soon-winkel-btn" onclick="switchPage('winkel');setFilter('_soon')" style="display:none"></button>
+    </div>
+    <div class="overview-section">
+      <div class="overview-label">🍳 Bereid</div>
+      <div class="stats" id="stats-bereid"></div>
+      <button class="overview-soon-btn" id="soon-bereid-btn" onclick="switchPage('bereid');setFilter('_soon')" style="display:none"></button>
+    </div>
+    <div class="overview-section">
+      <div class="overview-label">📊 Totaal</div>
+      <div class="stats" id="stats-totaal"></div>
+    </div>
+  </div>
+
+  <!-- PAGE: Winkel -->
+  <div id="page-winkel" class="page">
+    <div class="filter-bar" id="filter-bar-winkel"></div>
     <div class="controls">
       <select id="sort-sel" onchange="renderList()">
         <option value="fifo">⏱ FIFO</option>
@@ -241,11 +256,46 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     <div class="list-meta" id="list-meta"></div>
     <div id="items-list"></div>
   </div>
-  <div id="bottom-bar">
-    <button class="icon-btn" onclick="openScanner()">
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="18" x2="21" y2="18"/><line x1="18" y1="14" x2="18" y2="21"/></svg>
+
+  <!-- PAGE: Bereid -->
+  <div id="page-bereid" class="page">
+    <div class="filter-bar" id="filter-bar-bereid"></div>
+    <div class="controls">
+      <select id="sort-sel-b" onchange="renderList()">
+        <option value="fifo">⏱ FIFO</option>
+        <option value="datum">📅 Vervaldatum</option>
+        <option value="naam">🔤 Naam A–Z</option>
+        <option value="locatie">📍 Locatie</option>
+      </select>
+      <input type="search" id="search-b" placeholder="Zoeken..." oninput="renderList()"/>
+    </div>
+    <div class="list-meta" id="list-meta-b"></div>
+    <div id="items-list-b"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div id="bottom-nav">
+    <button class="nav-btn active" id="nav-overzicht" onclick="switchPage('overzicht')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      <span>Overzicht</span>
     </button>
-    <button id="fab" class="fab-w" onclick="openAddSheet()">+ Toevoegen</button>
+    <button class="nav-btn" id="nav-winkel" onclick="switchPage('winkel')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      <span>Winkel</span>
+    </button>
+    <button class="nav-btn nav-center" id="nav-add" onclick="openAddSheet()">
+      <div class="nav-add-circle">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      </div>
+    </button>
+    <button class="nav-btn" id="nav-bereid" onclick="switchPage('bereid')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+      <span>Bereid</span>
+    </button>
+    <button class="nav-btn" id="nav-scan" onclick="openScanner()">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="18" x2="21" y2="18"/><line x1="18" y1="14" x2="18" y2="21"/></svg>
+      <span>Scan</span>
+    </button>
   </div>
 </div>
 
@@ -387,9 +437,9 @@ async function subscribeRealtime(){
     });
 }
 
-const ICONS_W={vlees:'🥩',vis:'🐟',groenten:'🥦',fruit:'🍓',brood:'🍞',ijs:'🍦',kroketten:'🥔',overig:'📦'};
+const ICONS_W={vlees:'🥩',vis:'🐟',groenten:'🥦',fruit:'🍓',brood:'🍞',ijs:'🍦',kroketten:'🥔',pizza:'🍕',overig:'📦'};
 const ICONS_B={soep:'🍲',stoofpot:'🥘',pasta:'🍝',rijst:'🍚','vlees-b':'🥩','vis-b':'🐟','groente-b':'🥦',baksel:'🥐','overig-b':'🍽️'};
-const LABELS_W={vlees:'Vlees',vis:'Vis',groenten:'Groenten',fruit:'Fruit',brood:'Brood',ijs:'IJs',kroketten:'Kroketten',overig:'Overig'};
+const LABELS_W={vlees:'Vlees',vis:'Vis',groenten:'Groenten',fruit:'Fruit',brood:'Brood',ijs:'IJs',kroketten:'Kroketten',pizza:'Pizza',overig:'Overig'};
 const LABELS_B={soep:'Soep',stoofpot:'Stoofpot',pasta:'Pasta',rijst:'Rijst','vlees-b':'Vleesgerecht','vis-b':'Visgerecht','groente-b':'Groentegerecht',baksel:'Baksel','overig-b':'Overig'};
 
 let items=[], activeTab='winkel', editId=null;
@@ -663,7 +713,26 @@ function scheduleNotifications(){
 }
 
 // ── Tab / filter / render ──
-function switchTab(t){activeTab=t;activeFilter='alle';document.getElementById('tab-w').className='tab'+(t==='winkel'?' active-w':'');document.getElementById('tab-b').className='tab'+(t==='bereid'?' active-b':'');document.getElementById('fab').className=t==='winkel'?'fab-w':'fab-b';renderAll();}
+let activePage='overzicht';
+
+function switchPage(page){
+  activePage=page;
+  // Show/hide pages
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active-page'));
+  document.getElementById('page-'+page).classList.add('active-page');
+  // Update nav buttons
+  document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+  const nb=document.getElementById('nav-'+page);
+  if(nb)nb.classList.add('active');
+  // Set activeTab for add sheet
+  if(page==='winkel'||page==='bereid') activeTab=page;
+  // Update add button colour
+  const addCircle=document.querySelector('.nav-add-circle');
+  if(addCircle) addCircle.style.background=page==='bereid'?'var(--amber)':'var(--blue)';
+  renderAll();
+}
+
+function switchTab(t){ switchPage(t); }
 function getDays(d){if(!d)return null;const t=new Date();t.setHours(0,0,0,0);return Math.round((new Date(d)-t)/86400000);}
 
 function renderFilterBar(){
@@ -681,35 +750,64 @@ function renderFilterBar(){
 }
 function setFilter(k){activeFilter=k;renderFilterBar();renderList();}
 
-function renderStats(){
-  const mine=items.filter(i=>i.type===activeTab);
+function statGrid(type){
+  const mine=items.filter(i=>i.type===type);
   const total=mine.reduce((s,i)=>s+(i.qty||i.porties||0),0);
   const soon=mine.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d>=0&&d<=7;}).length;
   const exp=mine.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<0;}).length;
-  const unit=activeTab==='bereid'?'porties':'stuks';
-  document.getElementById('stats').innerHTML=`
-    <div class="stat"><div class="stat-label">Producten</div><div class="stat-value">${mine.length}</div></div>
+  const unit=type==='bereid'?'porties':'stuks';
+  return `<div class="stat"><div class="stat-label">Producten</div><div class="stat-value">${mine.length}</div></div>
     <div class="stat"><div class="stat-label">Totaal ${unit}</div><div class="stat-value">${total}</div></div>
     <div class="stat"><div class="stat-label" style="color:${soon>0?'var(--amber)':''}">7 dagen</div><div class="stat-value" style="color:${soon>0?'var(--amber)':''}">${soon}</div></div>
     <div class="stat"><div class="stat-label" style="color:${exp>0?'var(--red)':''}">Verlopen</div><div class="stat-value" style="color:${exp>0?'var(--red)':''}">${exp}</div></div>`;
 }
 
-function renderList(){
-  const q=document.getElementById('search').value.toLowerCase(), sort=document.getElementById('sort-sel').value;
-  let list=items.filter(i=>i.type===activeTab&&i.naam.toLowerCase().includes(q));
-  if(activeFilter==='_soon')list=list.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d>=0&&d<=7;});
-  else if(activeFilter.startsWith('cat:'))list=list.filter(i=>i.cat===activeFilter.slice(4));
-  else if(activeFilter.startsWith('loc:'))list=list.filter(i=>i.vriezer===activeFilter.slice(4));
+function renderStats(){
+  // Overzicht page stats
+  document.getElementById('stats-winkel').innerHTML=statGrid('winkel');
+  document.getElementById('stats-bereid').innerHTML=statGrid('bereid');
+  // Totaal
+  const allItems=items;
+  const totalProd=allItems.length;
+  const totalSoon=allItems.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d>=0&&d<=7;}).length;
+  const totalExp=allItems.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<0;}).length;
+  document.getElementById('stats-totaal').innerHTML=`
+    <div class="stat"><div class="stat-label">Alle producten</div><div class="stat-value">${totalProd}</div></div>
+    <div class="stat"><div class="stat-label">&nbsp;</div><div class="stat-value">&nbsp;</div></div>
+    <div class="stat"><div class="stat-label" style="color:${totalSoon>0?'var(--amber)':''}">7 dagen</div><div class="stat-value" style="color:${totalSoon>0?'var(--amber)':''}">${totalSoon}</div></div>
+    <div class="stat"><div class="stat-label" style="color:${totalExp>0?'var(--red)':''}">Verlopen</div><div class="stat-value" style="color:${totalExp>0?'var(--red)':''}">${totalExp}</div></div>`;
+  // Show soon buttons on overview
+  const soonW=items.filter(i=>i.type==='winkel'&&getDays(i.gebruik)!==null&&getDays(i.gebruik)>=0&&getDays(i.gebruik)<=7);
+  const soonB=items.filter(i=>i.type==='bereid'&&getDays(i.gebruik)!==null&&getDays(i.gebruik)>=0&&getDays(i.gebruik)<=7);
+  const bw=document.getElementById('soon-winkel-btn');
+  const bb=document.getElementById('soon-bereid-btn');
+  if(bw){bw.style.display=soonW.length?'block':'none';bw.textContent='⚠️ '+soonW.length+' winkelproduct'+(soonW.length!==1?'en':'')+' verlopen binnenkort — bekijk →';}
+  if(bb){bb.style.display=soonB.length?'block':'none';bb.textContent='⚠️ '+soonB.length+' bereid gerecht'+(soonB.length!==1?'en':'')+' verloopt binnenkort — bekijk →';}
+}
+
+function renderListForType(type){
+  const isB=type==='bereid';
+  const searchEl=document.getElementById(isB?'search-b':'search');
+  const sortEl=document.getElementById(isB?'sort-sel-b':'sort-sel');
+  const metaEl=document.getElementById(isB?'list-meta-b':'list-meta');
+  const listEl=document.getElementById(isB?'items-list-b':'items-list');
+  if(!searchEl||!listEl)return;
+  const q=searchEl.value.toLowerCase(), sort=sortEl?sortEl.value:'fifo';
+  const myFilter=activeTab===type?activeFilter:'alle';
+  let list=items.filter(i=>i.type===type&&i.naam.toLowerCase().includes(q));
+  if(myFilter==='_soon')list=list.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d>=0&&d<=7;});
+  else if(myFilter.startsWith('cat:'))list=list.filter(i=>i.cat===myFilter.slice(4));
+  else if(myFilter.startsWith('loc:'))list=list.filter(i=>i.vriezer===myFilter.slice(4));
   list.sort((a,b)=>{
     if(sort==='fifo'){const da=a.invries||'9999',db=b.invries||'9999';return da<db?-1:da>db?1:0;}
     if(sort==='datum'){const da=getDays(a.gebruik),db=getDays(b.gebruik);if(da===null&&db===null)return 0;if(da===null)return 1;if(db===null)return -1;return da-db;}
     if(sort==='locatie')return((a.vriezer||'')+(a.lade||'')).localeCompare((b.vriezer||'')+(b.lade||''),'nl');
     return a.naam.localeCompare(b.naam,'nl');
   });
-  document.getElementById('list-meta').textContent=list.length+' '+(activeTab==='bereid'?'gerecht':'product')+(list.length!==1?'en':'');
-  if(!list.length){document.getElementById('items-list').innerHTML=`<div class="empty"><div class="empty-icon">${activeTab==='bereid'?'🍳':'🛒'}</div><p>${!items.filter(i=>i.type===activeTab).length?'Tik op "+ Toevoegen" om te beginnen':'Geen resultaten'}</p></div>`;return;}
-  const icons=activeTab==='bereid'?ICONS_B:ICONS_W, labels=activeTab==='bereid'?LABELS_B:LABELS_W;
-  document.getElementById('items-list').innerHTML=list.map(it=>{
+  if(metaEl)metaEl.textContent=list.length+' '+(isB?'gerecht':'product')+(list.length!==1?'en':'');
+  if(!list.length){listEl.innerHTML=`<div class="empty"><div class="empty-icon">${isB?'🍳':'🛒'}</div><p>${!items.filter(i=>i.type===type).length?'Tik op "+ Toevoegen" om te beginnen':'Geen resultaten'}</p></div>`;return;}
+  const icons=isB?ICONS_B:ICONS_W, labels=isB?LABELS_B:LABELS_W;
+  listEl.innerHTML=list.map(it=>{
     const dg=getDays(it.gebruik), cls=dg!==null&&dg<0?'expired':dg!==null&&dg<=7?'soon':'';
     const qty=it.type==='bereid'?it.porties:it.qty, unitLbl=it.type==='bereid'?'porties':'stuks';
     const invStr=it.invries?new Date(it.invries).toLocaleDateString('nl-BE',{day:'numeric',month:'short'}):'';
@@ -723,6 +821,11 @@ function renderList(){
     const footer=`<div class="card-footer">${hasNote?`<button class="foot-btn" onclick="toggleNote(${it.id})">${noteExp?'▲ Verberg':'▼ Notitie'}</button>`:''}<button class="foot-btn" style="margin-left:auto" onclick="openEditSheet(${it.id})">Bewerken</button></div>`;
     return `<div class="card ${cls}"><div class="card-main">${thumb}<div class="card-body"><div class="card-name">${it.naam}</div><div class="card-sub">${sub}</div><div class="card-badges">${dateBadge}${fifoBadge}${locBadge}</div></div><div class="card-ctrl"><div class="qty-row"><button class="qb" onclick="changeQty(${it.id},-1)">−</button><span class="qn">${qty}</span><button class="qb" onclick="changeQty(${it.id},1)">+</button></div><div class="unit-lbl">${unitLbl}</div><button class="del-btn" onclick="deleteItem(${it.id})">✕</button></div></div>${footer}${hasNote&&noteExp?`<div class="note-body">${it.notitie.replace(/\n/g,'<br>')}</div>`:''}</div>`;
   }).join('');
+}
+
+function renderList(){
+  renderListForType('winkel');
+  renderListForType('bereid');
 }
 
 function renderAll(){renderStats();renderFilterBar();renderList();}
@@ -739,7 +842,15 @@ function locationFields(it){
 }
 
 // ── Sheet ──
-function openAddSheet(){editId=null;document.getElementById('sheet-title').textContent=activeTab==='winkel'?'🛒 Product toevoegen':'🍳 Gerecht toevoegen';renderSheetBody(null);document.getElementById('sheet-overlay').classList.add('open');history.pushState({sheet:'add'},'');}
+function openAddSheet(){
+  editId=null;
+  // Default to current page's tab
+  if(activePage==='overzicht') activeTab='winkel';
+  document.getElementById('sheet-title').textContent=activeTab==='winkel'?'🛒 Product toevoegen':'🍳 Gerecht toevoegen';
+  renderSheetBody(null);
+  document.getElementById('sheet-overlay').classList.add('open');
+  history.pushState({sheet:'add'},'');
+}
 function openEditSheet(id){editId=id;const it=items.find(i=>i.id===id);if(!it)return;document.getElementById('sheet-title').textContent=it.naam+' bewerken';renderSheetBody(it);document.getElementById('sheet-overlay').classList.add('open');history.pushState({sheet:'edit'},'');}
 function closeSheet(e){if(e&&e.target!==document.getElementById('sheet-overlay'))return;document.getElementById('sheet-overlay').classList.remove('open');}
 function closeSheetDirect(){
@@ -761,6 +872,7 @@ function renderSheetBody(it){
           <option value="brood"${it&&it.cat==='brood'?' selected':''}>🍞 Brood</option>
           <option value="ijs"${it&&it.cat==='ijs'?' selected':''}>🍦 IJs</option>
           <option value="kroketten"${it&&it.cat==='kroketten'?' selected':''}>🥔 Kroketten</option>
+          <option value="pizza"${it&&it.cat==='pizza'?' selected':''}>🍕 Pizza</option>
           <option value="overig"${it&&it.cat==='overig'?' selected':''}>📦 Overig</option>
         </select></div>
         <div class="field"><label>Aantal</label><input type="number" id="s-qty" value="${it?it.qty:1}" min="1"></div>
