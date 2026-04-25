@@ -62,7 +62,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .tab{padding:11px;font-size:14px;font-family:var(--font);text-align:center;cursor:pointer;background:transparent;color:var(--text3);border:none;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
 .tab.active-w{color:var(--blue);border-bottom-color:var(--blue)}
 .tab.active-b{color:var(--amber);border-bottom-color:var(--amber)}
-#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(80px,calc(env(safe-area-inset-bottom)+80px))}
+#main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:12px 16px;padding-bottom:max(120px,calc(env(safe-area-inset-bottom)+120px))}
 #bottom-bar{position:fixed;bottom:0;left:0;right:0;background:var(--bg);border-top:1px solid var(--border);padding:10px 16px;padding-bottom:max(10px,env(safe-area-inset-bottom));display:flex;gap:8px}
 #fab{flex:1;padding:13px;font-size:15px;font-weight:500;font-family:var(--font);border:none;border-radius:var(--radius);cursor:pointer}
 .fab-w{background:var(--blue);color:#0f172a}
@@ -266,7 +266,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 <div id="sheet-overlay" onclick="closeSheet(event)">
   <div id="sheet">
     <div class="sheet-handle"></div>
-    <div class="sheet-title" id="sheet-title">Product toevoegen</div>
+    <div style="display:flex;align-items:center;margin-bottom:14px;gap:10px">
+      <button onclick="closeSheetDirect()" style="background:none;border:none;color:var(--text3);cursor:pointer;padding:4px 0;font-size:13px;font-family:var(--font);display:flex;align-items:center;gap:4px;flex-shrink:0">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
+        Sluiten
+      </button>
+      <div class="sheet-title" id="sheet-title" style="margin-bottom:0;flex:1">Product toevoegen</div>
+    </div>
     <div id="sheet-body"></div>
   </div>
 </div>
@@ -733,10 +739,13 @@ function locationFields(it){
 }
 
 // ── Sheet ──
-function openAddSheet(){editId=null;document.getElementById('sheet-title').textContent=activeTab==='winkel'?'🛒 Product toevoegen':'🍳 Gerecht toevoegen';renderSheetBody(null);document.getElementById('sheet-overlay').classList.add('open');}
-function openEditSheet(id){editId=id;const it=items.find(i=>i.id===id);if(!it)return;document.getElementById('sheet-title').textContent=it.naam+' bewerken';renderSheetBody(it);document.getElementById('sheet-overlay').classList.add('open');}
+function openAddSheet(){editId=null;document.getElementById('sheet-title').textContent=activeTab==='winkel'?'🛒 Product toevoegen':'🍳 Gerecht toevoegen';renderSheetBody(null);document.getElementById('sheet-overlay').classList.add('open');history.pushState({sheet:'add'},'');}
+function openEditSheet(id){editId=id;const it=items.find(i=>i.id===id);if(!it)return;document.getElementById('sheet-title').textContent=it.naam+' bewerken';renderSheetBody(it);document.getElementById('sheet-overlay').classList.add('open');history.pushState({sheet:'edit'},'');}
 function closeSheet(e){if(e&&e.target!==document.getElementById('sheet-overlay'))return;document.getElementById('sheet-overlay').classList.remove('open');}
-function closeSheetDirect(){document.getElementById('sheet-overlay').classList.remove('open');}
+function closeSheetDirect(){
+  document.getElementById('sheet-overlay').classList.remove('open');
+  // Also close settings if open
+}
 
 function renderSheetBody(it){
   const isEdit=!!it,type=it?it.type:activeTab,td=today(),loc=locationFields(it);
@@ -898,6 +907,20 @@ async function boot(){
 
 // Also need to add invite_code column to households if missing
 // (handled via SQL in Supabase)
+
+// Intercept Android back button
+window.addEventListener('popstate', function(e){
+  const sheetOpen = document.getElementById('sheet-overlay').classList.contains('open');
+  const settingsOpen = document.getElementById('settings-overlay').classList.contains('open');
+  const scannerOpen = document.getElementById('scanner-overlay').classList.contains('open');
+  if(scannerOpen){ closeScanner(); history.pushState(null,''); return; }
+  if(settingsOpen){ closeSettings(); history.pushState(null,''); return; }
+  if(sheetOpen){ document.getElementById('sheet-overlay').classList.remove('open'); history.pushState(null,''); return; }
+  // Nothing open — allow normal back behaviour (but push state to prevent exit)
+  history.pushState(null,'');
+});
+// Push initial state so first back press is caught
+history.pushState(null,'');
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 initRealtimeClient();
