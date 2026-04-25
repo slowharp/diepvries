@@ -166,6 +166,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .spinning{animation:spin 1s linear infinite}
 .loading-screen{display:flex;align-items:center;justify-content:center;height:100dvh;background:var(--bg);font-size:32px}
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
 <body>
 
@@ -325,6 +326,44 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 const SUPA='https://gtktqkktzzzyayeshxci.supabase.co';
 const KEY='sb_publishable_ADMe2ZDqU8dijFjss46Z3g_IXKooz3H';
 
+// Supabase Realtime client
+let supaClient = null;
+let realtimeChannel = null;
+
+function initRealtimeClient(){
+  if(typeof supabase === 'undefined') return;
+  supaClient = supabase.createClient(SUPA, KEY, {
+    auth: { persistSession: false }
+  });
+}
+
+async function subscribeRealtime(){
+  if(!supaClient || !householdId || !currentSession) return;
+  // Set auth for realtime
+  await supaClient.auth.setSession(currentSession);
+  // Unsubscribe existing channel
+  if(realtimeChannel){
+    await supaClient.removeChannel(realtimeChannel);
+    realtimeChannel = null;
+  }
+  realtimeChannel = supaClient
+    .channel('items-'+householdId)
+    .on('postgres_changes', {
+      event: '*',
+      schema: 'public',
+      table: 'items',
+      filter: 'household_id=eq.'+householdId
+    }, (payload) => {
+      // Another device made a change — reload
+      loadItems();
+    })
+    .subscribe((status) => {
+      if(status === 'SUBSCRIBED'){
+        setSyncStatus('ok', 'Live sync');
+      }
+    });
+}
+
 const ICONS_W={vlees:'🥩',vis:'🐟',groenten:'🥦',fruit:'🍓',brood:'🍞',ijs:'🍦',overig:'📦'};
 const ICONS_B={soep:'🍲',stoofpot:'🥘',pasta:'🍝',rijst:'🍚','vlees-b':'🥩','vis-b':'🐟','groente-b':'🥦',baksel:'🥐','overig-b':'🍽️'};
 const LABELS_W={vlees:'Vlees',vis:'Vis',groenten:'Groenten',fruit:'Fruit',brood:'Brood',ijs:'IJs',overig:'Overig'};
@@ -388,6 +427,7 @@ async function submitAuth(){
 
 async function logout(){
   try{await supa('POST','/auth/v1/logout');}catch(e){}
+  if(realtimeChannel&&supaClient){await supaClient.removeChannel(realtimeChannel);realtimeChannel=null;}
   currentUser=null;currentSession=null;householdId=null;
   localStorage.removeItem('diepvries-session');
   showScreen('auth');
@@ -405,6 +445,7 @@ async function afterLogin(){
     document.getElementById('household-name').textContent=householdName;
     showScreen('app');
     await loadItems();
+    subscribeRealtime();
   }else{
     showScreen('household');
   }
@@ -427,6 +468,7 @@ async function createHousehold(){
     document.getElementById('household-name').textContent=householdName;
     showScreen('app');
     await loadItems();
+    subscribeRealtime();
   }catch(e){errEl.textContent='Fout: '+e.message;errEl.style.display='block';}
 }
 
@@ -444,6 +486,7 @@ async function joinHousehold(){
     document.getElementById('household-name').textContent=householdName;
     showScreen('app');
     await loadItems();
+    subscribeRealtime();
   }catch(e){errEl.textContent='Fout: '+e.message;errEl.style.display='block';}
 }
 
@@ -834,6 +877,7 @@ async function boot(){
 // (handled via SQL in Supabase)
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
+initRealtimeClient();
 boot();
 </script>
 </body>
