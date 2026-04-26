@@ -118,6 +118,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .card-footer{border-top:1px solid var(--border);padding:7px 12px;display:flex;gap:10px;align-items:center}
 .foot-btn{font-size:13px;color:var(--text2);background:none;border:none;cursor:pointer;font-family:var(--font);padding:6px 4px;min-height:32px}
 .foot-btn:active{color:var(--text)}
+.card-edit-hint{font-size:11px;color:var(--text3);text-align:right;padding:0 12px 8px;font-family:var(--font)}
 .note-body{padding:9px 12px;font-size:13px;color:var(--text2);line-height:1.55;border-top:1px solid var(--border)}
 .empty{text-align:center;padding:40px 20px;color:var(--text3)}
 .empty-icon{font-size:38px;margin-bottom:10px}
@@ -398,56 +399,84 @@ const KEY='sb_publishable_ADMe2ZDqU8dijFjss46Z3g_IXKooz3H';
 // Supabase Realtime client
 let supaClient = null;
 let realtimeChannel = null;
+let pollingInterval = null;
+let lastKnownUpdatedAt = null;
 
 function initRealtimeClient(){
   if(typeof supabase === 'undefined') return;
   supaClient = supabase.createClient(SUPA, KEY, {
-    auth: { persistSession: false }
+    auth: { persistSession: false },
+    realtime: { timeout: 30000 }
   });
 }
 
 async function subscribeRealtime(){
   if(!supaClient || !householdId || !currentSession) return;
-  // Set auth for realtime
-  await supaClient.auth.setSession(currentSession);
-  // Unsubscribe existing channel
-  if(realtimeChannel){
-    await supaClient.removeChannel(realtimeChannel);
-    realtimeChannel = null;
-  }
-  realtimeChannel = supaClient
-    .channel('items-'+householdId)
-    .on('postgres_changes', {
-      event: '*',
-      schema: 'public',
-      table: 'items',
-      filter: 'household_id=eq.'+householdId
-    }, async (payload) => {
-      // Handle individual change without full reload
-      if(payload.eventType === 'INSERT' || payload.eventType === 'UPDATE'){
-        // Fetch the specific item that changed
-        try{
-          const rows = await supa('GET','/rest/v1/items?id=eq.'+payload.new.id+'&select=id,data');
-          if(rows && rows.length > 0){
-            const updated = rows[0].data;
-            const idx = items.findIndex(i=>i.id.toString()===payload.new.id.toString());
-            if(idx>=0) items[idx]=updated;
-            else items.push(updated);
-            renderAll(); scheduleNotifications();
-            setSyncStatus('ok','Bijgewerkt');
-          }
-        }catch(e){}
-      } else if(payload.eventType === 'DELETE'){
-        items = items.filter(i=>i.id.toString()!==payload.old.id.toString());
-        renderAll();
+  try{
+    await supaClient.auth.setSession(currentSession);
+    if(realtimeChannel){
+      await supaClient.removeChannel(realtimeChannel);
+      realtimeChannel = null;
+    }
+    realtimeChannel = supaClient
+      .channel('items-'+householdId)
+      .on('postgres_changes', {
+        event: '*', schema: 'public', table: 'items',
+        filter: 'household_id=eq.'+householdId
+      }, async (payload) => {
+        if(payload.eventType==='INSERT'||payload.eventType==='UPDATE'){
+          try{
+            const rows=await supa('GET','/rest/v1/items?id=eq.'+payload.new.id+'&select=id,data');
+            if(rows&&rows.length>0){
+              const updated=rows[0].data;
+              const idx=items.findIndex(i=>i.id.toString()===payload.new.id.toString());
+              if(idx>=0) items[idx]=updated; else items.push(updated);
+              renderAll(); scheduleNotifications();
+              setSyncStatus('ok','Bijgewerkt');
+            }
+          }catch(e){}
+        } else if(payload.eventType==='DELETE'){
+          items=items.filter(i=>i.id.toString()!==payload.old.id.toString());
+          renderAll(); setSyncStatus('ok','Bijgewerkt');
+        }
+      })
+      .subscribe((status) => {
+        if(status==='SUBSCRIBED') setSyncStatus('ok','Live');
+        else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
+          setSyncStatus('idle','Polling');
+        }
+      });
+  }catch(e){ setSyncStatus('idle','Polling'); }
+}
+
+// Robust polling: check for changes every 10s regardless of Realtime status
+async function startPolling(){
+  if(pollingInterval) clearInterval(pollingInterval);
+  pollingInterval = setInterval(async()=>{
+    if(!householdId||!currentSession||document.visibilityState==='hidden') return;
+    try{
+      // Fetch only items updated after our last known timestamp
+      const url = lastKnownUpdatedAt
+        ? '/rest/v1/items?household_id=eq.'+householdId+'&updated_at=gt.'+encodeURIComponent(lastKnownUpdatedAt)+'&select=id,data,updated_at'
+        : '/rest/v1/items?household_id=eq.'+householdId+'&select=id,data,updated_at';
+      const rows = await supa('GET', url);
+      if(rows && rows.length > 0){
+        // Merge new/updated items
+        rows.forEach(r=>{
+          const idx=items.findIndex(i=>i.id.toString()===r.id.toString());
+          if(idx>=0) items[idx]=r.data; else items.push(r.data);
+          if(!lastKnownUpdatedAt||r.updated_at>lastKnownUpdatedAt) lastKnownUpdatedAt=r.updated_at;
+        });
+        renderAll(); scheduleNotifications();
         setSyncStatus('ok','Bijgewerkt');
       }
-    })
-    .subscribe((status) => {
-      if(status === 'SUBSCRIBED'){
-        setSyncStatus('ok', 'Live sync');
-      }
-    });
+      // Also check for deletions every 60s (compare remote vs local count)
+    }catch(e){}
+  }, 10000);
+}
+
+function stopPolling(){
+  if(pollingInterval){ clearInterval(pollingInterval); pollingInterval=null; }
 }
 
 const ICONS_W={vlees:'🥩',vis:'🐟',groenten:'🥦',fruit:'🍓',brood:'🍞',ijs:'🍦',kroketten:'🥔',pizza:'🍕',overig:'📦'};
@@ -515,6 +544,8 @@ async function submitAuth(){
 async function logout(){
   try{await supa('POST','/auth/v1/logout');}catch(e){}
   if(realtimeChannel&&supaClient){await supaClient.removeChannel(realtimeChannel);realtimeChannel=null;}
+  stopPolling();
+  lastKnownUpdatedAt=null;
   currentUser=null;currentSession=null;householdId=null;
   localStorage.removeItem('diepvries-session');
   showScreen('auth');
@@ -534,6 +565,7 @@ async function afterLogin(){
     await loadItems();
     await loadSettingsFromCloud();
     subscribeRealtime();
+    startPolling();
   }else{
     showScreen('household');
   }
@@ -558,6 +590,7 @@ async function createHousehold(){
     await loadItems();
     await loadSettingsFromCloud();
     subscribeRealtime();
+    startPolling();
   }catch(e){errEl.textContent='Fout: '+e.message;errEl.style.display='block';}
 }
 
@@ -577,6 +610,7 @@ async function joinHousehold(){
     await loadItems();
     await loadSettingsFromCloud();
     subscribeRealtime();
+    startPolling();
   }catch(e){errEl.textContent='Fout: '+e.message;errEl.style.display='block';}
 }
 
@@ -600,12 +634,15 @@ async function loadItems(){
   if(!householdId)return;
   setSyncStatus('busy','Laden...');
   try{
-    const rows=await supa('GET','/rest/v1/items?household_id=eq.'+householdId+'&select=id,data');
+    const rows=await supa('GET','/rest/v1/items?household_id=eq.'+householdId+'&select=id,data,updated_at');
     if(rows && rows.length > 0){
       // Merge: cloud items win, but keep local items not yet synced
       const merged={};
       items.forEach(li=>merged[li.id.toString()]=li);   // start with local
-      rows.forEach(r=>merged[r.data.id.toString()]=r.data); // cloud overrides
+      rows.forEach(r=>{
+        merged[r.data.id.toString()]=r.data; // cloud overrides
+        if(!lastKnownUpdatedAt||r.updated_at>lastKnownUpdatedAt) lastKnownUpdatedAt=r.updated_at;
+      });
       items=Object.values(merged);
     }
     // If cloud is empty, keep local items as-is (don't wipe them)
@@ -668,8 +705,17 @@ function save(){
 async function manualSync(){await loadItems();}
 
 // Auto-refresh every 30 seconds when app is visible
-setInterval(()=>{if(document.visibilityState==='visible'&&householdId)loadItems();},30000);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&householdId)loadItems();});
+// On visibility change: reload and reconnect realtime
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&householdId){
+    loadItems();
+    // Reconnect realtime if needed
+    if(realtimeChannel&&supaClient){
+      const state=realtimeChannel.state;
+      if(state!=='joined'&&state!=='joining') subscribeRealtime();
+    }
+  }
+});
 
 // ── Settings ──
 const DEFAULT_LADES=[];
@@ -874,8 +920,9 @@ function renderListForType(type){
     const thumb=it.foto?`<div class="card-thumb"><img src="${it.foto}" loading="lazy"></div>`:`<div class="card-thumb">${icons[it.cat]||'📦'}</div>`;
     const sub=it.type==='bereid'?`${labels[it.cat]||it.cat}${it.portiegrootte?' · '+it.portiegrootte+'/portie':''}`:`${labels[it.cat]||it.cat}${it.eenheid?' · '+it.eenheid:''}`;
     const hasNote=it.type==='bereid'&&it.notitie, noteExp=expandedNotes.has(it.id);
-    const footer=`<div class="card-footer">${hasNote?`<button class="foot-btn" onclick="toggleNote(${it.id})">${noteExp?'▲ Verberg':'▼ Notitie'}</button>`:''}<button class="foot-btn" style="margin-left:auto" onclick="openEditSheet(${it.id})">Bewerken</button></div>`;
-    return `<div class="card ${cls}"><div class="card-main">${thumb}<div class="card-body"><div class="card-name">${it.naam}</div><div class="card-sub">${sub}</div><div class="card-badges">${dateBadge}${fifoBadge}${locBadge}</div></div><div class="card-ctrl"><div class="qty-row"><button class="qb" onclick="changeQty(${it.id},-1)">−</button><span class="qn">${qty}</span><button class="qb" onclick="changeQty(${it.id},1)">+</button></div><div class="unit-lbl">${unitLbl}</div><button class="del-btn" onclick="deleteItem(${it.id})">✕</button></div></div>${footer}${hasNote&&noteExp?`<div class="note-body">${it.notitie.replace(/\n/g,'<br>')}</div>`:''}</div>`;
+    const noteBtn=hasNote?`<button class="foot-btn" onclick="toggleNote(${it.id})">${noteExp?'▲ Verberg notitie':'▼ Toon notitie'}</button>`:'';
+    const footer=hasNote?`<div class="card-footer">${noteBtn}</div>`:'';
+    return `<div class="card ${cls}" onclick="openEditSheet(${it.id})" style="cursor:pointer"><div class="card-main"><div onclick="event.stopPropagation()">${thumb}</div><div class="card-body"><div class="card-name">${it.naam}</div><div class="card-sub">${sub}</div><div class="card-badges">${dateBadge}${fifoBadge}${locBadge}</div></div><div class="card-ctrl" onclick="event.stopPropagation()"><div class="qty-row"><button class="qb" onclick="changeQty(${it.id},-1)">−</button><span class="qn">${qty}</span><button class="qb" onclick="changeQty(${it.id},1)">+</button></div><div class="unit-lbl">${unitLbl}</div><button class="del-btn" onclick="deleteItem(${it.id})">✕</button></div></div><div class="card-edit-hint">Tik om te bewerken</div>${footer}${hasNote&&noteExp?`<div class="note-body" onclick="event.stopPropagation()">${it.notitie.replace(/\n/g,'<br>')}</div>`:''}</div>`;
   }).join('');
 }
 
