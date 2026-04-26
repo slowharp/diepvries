@@ -484,9 +484,12 @@ async function subscribeRealtime(){
         }
       })
       .subscribe((status) => {
-        if(status==='SUBSCRIBED') setSyncStatus('ok','Live');
+        if(status==='SUBSCRIBED') setSyncStatus('ok','Live sync');
         else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'){
-          setSyncStatus('idle','Polling');
+          // Don't show Polling as a permanent status - polling runs silently in background
+          const cur=document.getElementById('sync-txt');
+          if(cur&&cur.textContent==='Laden...'||cur&&cur.textContent.includes('polling')){}
+          // Just keep last known status - polling runs in background
         }
       });
   }catch(e){ setSyncStatus('idle','Polling'); }
@@ -512,8 +515,11 @@ async function startPolling(){
         });
         renderAll(); scheduleNotifications();
         setSyncStatus('ok','Bijgewerkt');
+      } else {
+        // No new items - silently keep current status
+        const cur=document.getElementById('sync-txt');
+        if(cur&&(cur.textContent==='Laden...'||cur.textContent==='.'))setSyncStatus('ok','Gesynchroniseerd');
       }
-      // Also check for deletions every 60s (compare remote vs local count)
     }catch(e){}
   }, 10000);
 }
@@ -588,6 +594,7 @@ async function logout(){
   try{await supa('POST','/auth/v1/logout');}catch(e){}
   if(realtimeChannel&&supaClient){await supaClient.removeChannel(realtimeChannel);realtimeChannel=null;}
   stopPolling();
+  if(tokenRefreshTimer){clearInterval(tokenRefreshTimer);tokenRefreshTimer=null;}
   lastKnownUpdatedAt=null;
   currentUser=null;currentSession=null;householdId=null;
   localStorage.removeItem('diepvries-session');
@@ -689,7 +696,7 @@ async function loadItems(){
       items=Object.values(merged);
     }
     // If cloud is empty, keep local items as-is (don't wipe them)
-    setSyncStatus('ok',items.length+' items');
+    setSyncStatus('ok',items.length+' items geladen');
     renderAll(); scheduleNotifications();
     if(activePage==='boodschappen')renderShopPage();
   }catch(e){console.error('loadItems:',e.message||e);setSyncStatus('err','Offline: '+(e.message||'?').slice(0,40));renderAll();}
@@ -1329,6 +1336,30 @@ function removeManualShopItem(id){
   updateShopBadge();
 }
 
+// ── Token auto-refresh ──
+let tokenRefreshTimer=null;
+async function scheduleTokenRefresh(){
+  if(tokenRefreshTimer)clearInterval(tokenRefreshTimer);
+  tokenRefreshTimer=setInterval(async()=>{
+    if(!currentSession)return;
+    try{
+      const resp=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
+        method:'POST',
+        headers:{'apikey':KEY,'Content-Type':'application/json'},
+        body:JSON.stringify({refresh_token:currentSession.refresh_token})
+      });
+      if(resp.ok){
+        const refreshed=await resp.json();
+        if(refreshed&&refreshed.access_token){
+          currentSession=refreshed;
+          currentUser=refreshed.user;
+          localStorage.setItem('diepvries-session',JSON.stringify(refreshed));
+        }
+      }
+    }catch(e){}
+  }, 45*60*1000); // every 45 minutes
+}
+
 // ── Boot ──
 async function boot(){
   const stored=localStorage.getItem('diepvries-session');
@@ -1344,7 +1375,9 @@ async function boot(){
       if(userCheck.ok){
         const u=await userCheck.json();
         currentUser=u;
-        await afterLogin(); return;
+        await afterLogin();
+        scheduleTokenRefresh();
+        return;
       }
       // Token expired — try refresh
       const refreshResp=await fetch(SUPA+'/auth/v1/token?grant_type=refresh_token',{
