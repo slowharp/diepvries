@@ -71,6 +71,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 .ov-card:active{opacity:.85}
 .ov-card-winkel{background:#fff0f8}
 .ov-card-bereid{background:#f0faf4}
+.ov-card-boodschappen{background:#f5f0fa}
 .ov-card-left{flex:1;padding:16px 14px}
 .ov-card-title{font-size:16px;font-weight:500;color:var(--text);margin-bottom:10px}
 .ov-card-illo{width:100px;flex-shrink:0;display:flex;align-items:center;justify-content:center;padding:6px}
@@ -177,6 +178,25 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
 @keyframes spin{to{transform:rotate(360deg)}}
 .spinning{animation:spin 1s linear infinite}
 .loading-screen{display:flex;align-items:center;justify-content:center;height:100dvh;background:var(--bg);font-size:32px}
+
+/* ── v24 additions ── */
+.card.below-min{border-color:rgba(198,40,40,0.5);}
+.b-min{background:var(--red-bg);color:var(--red-text);}
+/* Boodschappenlijst page */
+.shop-section{margin-bottom:20px}
+.shop-section-title{font-size:12px;font-weight:500;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.shop-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);margin-bottom:6px}
+.shop-item.checked .shop-item-name{text-decoration:line-through;color:var(--text3)}
+.shop-item input[type=checkbox]{width:18px;height:18px;accent-color:var(--blue);flex-shrink:0;cursor:pointer}
+.shop-item-name{flex:1;font-size:14px;color:var(--text)}
+.shop-item-sub{font-size:12px;color:var(--text3);margin-left:auto;white-space:nowrap}
+.shop-add-row{display:flex;gap:8px;margin-bottom:14px}
+.shop-add-row input{flex:1;font-size:14px;font-family:var(--font);padding:9px 12px;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius-sm);color:var(--text);outline:none}
+.shop-add-btn{padding:9px 14px;font-size:14px;font-family:var(--font);border:none;border-radius:var(--radius-sm);background:var(--blue);color:#fff;cursor:pointer}
+.shop-actions{display:flex;gap:8px;margin-bottom:16px}
+.shop-action-btn{flex:1;padding:9px;font-size:13px;font-family:var(--font);border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg2);color:var(--text2);cursor:pointer}
+.shop-empty{text-align:center;padding:28px;color:var(--text3);font-size:14px}
+.nav-badge{display:inline-flex;align-items:center;justify-content:center;min-width:16px;height:16px;background:var(--red);color:#fff;border-radius:8px;font-size:10px;font-weight:500;padding:0 4px;margin-left:2px}
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 </head>
@@ -226,6 +246,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <span id="sync-dot" style="width:7px;height:7px;border-radius:50%;background:var(--text3);display:inline-block;flex-shrink:0"></span>
       <span id="sync-txt">...</span>
     </div>
+    <button class="hbtn" onclick="openScanner()" title="Scan barcode">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="18" x2="21" y2="18"/><line x1="18" y1="14" x2="18" y2="21"/></svg>
+    </button>
     <button class="hbtn" onclick="manualSync()">
       <svg id="sync-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
     </button>
@@ -252,6 +275,13 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
         <button class="overview-soon-btn" id="soon-bereid-btn" onclick="event.stopPropagation();switchPage('bereid');setFilter('_soon')" style="display:none"></button>
       </div>
       <div class="ov-card-illo" id="illo-bereid"></div>
+    </div>
+    <div class="ov-card" style="background:#f5f0fa" onclick="switchPage('boodschappen')">
+      <div class="ov-card-left">
+        <div class="ov-card-title">🛍️ Boodschappenlijst</div>
+        <div id="ov-shop-summary" style="font-size:13px;color:var(--text2);margin-top:4px">Laden...</div>
+      </div>
+      <div class="ov-card-illo" style="font-size:52px;line-height:1">📋</div>
     </div>
   </div>
 
@@ -287,6 +317,19 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
     <div id="items-list-b"></div>
   </div>
 
+  <!-- PAGE: Boodschappen -->
+  <div id="page-boodschappen" class="page">
+    <div class="shop-add-row">
+      <input type="text" id="shop-input" placeholder="Extra boodschap toevoegen..." onkeydown="if(event.key==='Enter')addManualShopItem()">
+      <button class="shop-add-btn" onclick="addManualShopItem()">+</button>
+    </div>
+    <div class="shop-actions">
+      <button class="shop-action-btn" onclick="copyShopList()">📋 Kopieer als tekst</button>
+      <button class="shop-action-btn" onclick="clearCheckedShopItems()">🗑️ Wis afgevinkte</button>
+    </div>
+    <div id="shop-content"></div>
+  </div>
+
   <!-- BOTTOM NAV -->
   <div id="bottom-nav">
     <button class="nav-btn active" id="nav-overzicht" onclick="switchPage('overzicht')">
@@ -298,7 +341,7 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <span>Winkel</span>
     </button>
     <button class="nav-btn nav-center" id="nav-add" onclick="openAddSheet()">
-      <div class="nav-add-circle">
+      <div class="nav-add-circle" id="nav-add-circle">
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       </div>
     </button>
@@ -306,9 +349,9 @@ html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--f
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
       <span>Zelf bereid</span>
     </button>
-    <button class="nav-btn" id="nav-scan" onclick="openScanner()">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><line x1="14" y1="14" x2="21" y2="14"/><line x1="14" y1="18" x2="21" y2="18"/><line x1="18" y1="14" x2="18" y2="21"/></svg>
-      <span>Scan</span>
+    <button class="nav-btn" id="nav-boodschappen" onclick="switchPage('boodschappen')">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/></svg>
+      <span>Boodsch.<span class="nav-badge" id="shop-badge" style="display:none">0</span></span>
     </button>
   </div>
 </div>
@@ -648,6 +691,7 @@ async function loadItems(){
     // If cloud is empty, keep local items as-is (don't wipe them)
     setSyncStatus('ok',items.length+' items');
     renderAll(); scheduleNotifications();
+    if(activePage==='boodschappen')renderShopPage();
   }catch(e){console.error('loadItems:',e.message||e);setSyncStatus('err','Offline: '+(e.message||'?').slice(0,40));renderAll();}
 }
 
@@ -815,9 +859,10 @@ function switchPage(page){
   // Set activeTab for add sheet
   if(page==='winkel'||page==='bereid') activeTab=page;
   // Update add button colour
-  const addCircle=document.querySelector('.nav-add-circle');
-  if(addCircle){addCircle.style.background=page==='bereid'?'#2e7d32':'#c2185b';}
-  renderAll();
+  const addCircle=document.getElementById('nav-add-circle');
+  if(addCircle){addCircle.style.background=page==='bereid'?'#2e7d32':page==='boodschappen'?'#6a1b9a':'#c2185b';}
+  if(page==='boodschappen'){renderShopPage();}
+  else{renderAll();}
 }
 
 function switchTab(t){ switchPage(t); }
@@ -868,16 +913,7 @@ function renderStats(){
   const ib=document.getElementById('illo-bereid');if(ib&&!ib.innerHTML)ib.innerHTML=BEREID_SVG;
   const sw=document.getElementById('stats-winkel');if(sw)sw.innerHTML=statGrid('winkel');
   const sb=document.getElementById('stats-bereid');if(sb)sb.innerHTML=statGrid('bereid');
-  // Totaal
-  const allItems=items;
-  const totalProd=allItems.length;
-  const totalSoon=allItems.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d>=0&&d<=7;}).length;
-  const totalExp=allItems.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<0;}).length;
-  document.getElementById('stats-totaal').innerHTML=`
-    <div class="stat"><div class="stat-label">Alle producten</div><div class="stat-value">${totalProd}</div></div>
-    <div class="stat"><div class="stat-label">&nbsp;</div><div class="stat-value">&nbsp;</div></div>
-    <div class="stat"><div class="stat-label" style="color:${totalSoon>0?'var(--amber)':''}">7 dagen</div><div class="stat-value" style="color:${totalSoon>0?'var(--amber)':''}">${totalSoon}</div></div>
-    <div class="stat"><div class="stat-label" style="color:${totalExp>0?'var(--red)':''}">Verlopen</div><div class="stat-value" style="color:${totalExp>0?'var(--red)':''}">${totalExp}</div></div>`;
+  // Totaal stats removed (element no longer exists in DOM)
   // Show soon buttons on overview
   const soonW=items.filter(i=>i.type==='winkel'&&getDays(i.gebruik)!==null&&getDays(i.gebruik)>=0&&getDays(i.gebruik)<=7);
   const soonB=items.filter(i=>i.type==='bereid'&&getDays(i.gebruik)!==null&&getDays(i.gebruik)>=0&&getDays(i.gebruik)<=7);
@@ -885,6 +921,23 @@ function renderStats(){
   const bb=document.getElementById('soon-bereid-btn');
   if(bw){bw.style.display=soonW.length?'block':'none';bw.textContent='⚠️ '+soonW.length+' winkelproduct'+(soonW.length!==1?'en':'')+' verlopen binnenkort — bekijk →';}
   if(bb){bb.style.display=soonB.length?'block':'none';bb.textContent='⚠️ '+soonB.length+' bereid gerecht'+(soonB.length!==1?'en':'')+' verloopt binnenkort — bekijk →';}
+  // Update shop summary on overview
+  const shopSummary=document.getElementById('ov-shop-summary');
+  if(shopSummary){
+    const minCount=items.filter(i=>i.type==='winkel'&&i.min&&i.min>0&&i.qty<i.min).length;
+    const soonCount=items.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<=7;}).length;
+    const manualCount=getManualShopItems().length;
+    const total=minCount+soonCount+manualCount;
+    if(total===0)shopSummary.textContent='Lijst is leeg';
+    else{
+      const parts=[];
+      if(minCount)parts.push(minCount+' bij te vullen');
+      if(soonCount)parts.push(soonCount+' verlopen binnenkort');
+      if(manualCount)parts.push(manualCount+' handmatig');
+      shopSummary.textContent=parts.join(' · ');
+    }
+  }
+  updateShopBadge();
 }
 
 function renderListForType(type){
@@ -917,12 +970,14 @@ function renderListForType(type){
     if(dg!==null){if(dg<0)dateBadge=`<span class="badge b-exp">Verlopen ${Math.abs(dg)}d</span>`;else if(dg<=7)dateBadge=`<span class="badge b-soon">Nog ${dg}d</span>`;else dateBadge=`<span class="badge b-ok">Tot ${new Date(it.gebruik).toLocaleDateString('nl-BE',{day:'numeric',month:'short'})}</span>`;}
     const fifoBadge=invStr?`<span class="badge b-date">${invStr}</span>`:'';
     const locBadge=(it.vriezer||it.lade)?`<span class="badge b-loc">${[it.vriezer,it.lade].filter(Boolean).join(' · ')}</span>`:'';
+    const minBadge=(it.type==='winkel'&&it.min&&it.min>0&&it.qty<it.min)?`<span class="badge b-min">🔻 ${it.qty}/${it.min}</span>`:'';
     const thumb=it.foto?`<div class="card-thumb"><img src="${it.foto}" loading="lazy"></div>`:`<div class="card-thumb">${icons[it.cat]||'📦'}</div>`;
     const sub=it.type==='bereid'?`${labels[it.cat]||it.cat}${it.portiegrootte?' · '+it.portiegrootte+'/portie':''}`:`${labels[it.cat]||it.cat}${it.eenheid?' · '+it.eenheid:''}`;
     const hasNote=it.type==='bereid'&&it.notitie, noteExp=expandedNotes.has(it.id);
     const noteBtn=hasNote?`<button class="foot-btn" onclick="toggleNote(${it.id})">${noteExp?'▲ Verberg notitie':'▼ Toon notitie'}</button>`:'';
     const footer=hasNote?`<div class="card-footer">${noteBtn}</div>`:'';
-    return `<div class="card ${cls}" onclick="openEditSheet(${it.id})" style="cursor:pointer"><div class="card-main"><div onclick="event.stopPropagation()">${thumb}</div><div class="card-body"><div class="card-name">${it.naam}</div><div class="card-sub">${sub}</div><div class="card-badges">${dateBadge}${fifoBadge}${locBadge}</div></div><div class="card-ctrl" onclick="event.stopPropagation()"><div class="qty-row"><button class="qb" onclick="changeQty(${it.id},-1)">−</button><span class="qn">${qty}</span><button class="qb" onclick="changeQty(${it.id},1)">+</button></div><div class="unit-lbl">${unitLbl}</div><button class="del-btn" onclick="deleteItem(${it.id})">✕</button></div></div><div class="card-edit-hint">Tik om te bewerken</div>${footer}${hasNote&&noteExp?`<div class="note-body" onclick="event.stopPropagation()">${it.notitie.replace(/\n/g,'<br>')}</div>`:''}</div>`;
+    const belowMin=it.type==='winkel'&&it.min&&it.min>0&&it.qty<it.min;
+    return `<div class="card ${cls}${belowMin?' below-min':''}" onclick="openEditSheet(${it.id})" style="cursor:pointer"><div class="card-main"><div onclick="event.stopPropagation()">${thumb}</div><div class="card-body"><div class="card-name">${it.naam}</div><div class="card-sub">${sub}</div><div class="card-badges">${dateBadge}${fifoBadge}${locBadge}${minBadge}</div></div><div class="card-ctrl" onclick="event.stopPropagation()"><div class="qty-row"><button class="qb" onclick="changeQty(${it.id},-1)">−</button><span class="qn">${qty}</span><button class="qb" onclick="changeQty(${it.id},1)">+</button></div><div class="unit-lbl">${unitLbl}</div><button class="del-btn" onclick="deleteItem(${it.id})">✕</button></div></div><div class="card-edit-hint">Tik om te bewerken</div>${footer}${hasNote&&noteExp?`<div class="note-body" onclick="event.stopPropagation()">${it.notitie.replace(/\n/g,'<br>')}</div>`:''}</div>`;
   }).join('');
 }
 
@@ -931,7 +986,7 @@ function renderList(){
   renderListForType('bereid');
 }
 
-function renderAll(){try{renderStats();}catch(e){console.error('renderStats:',e);}try{renderFilterBar();}catch(e){console.error('renderFilterBar:',e);}try{renderList();}catch(e){console.error('renderList:',e);}}
+function renderAll(){try{renderStats();}catch(e){console.error('renderStats:',e);}try{renderFilterBar();}catch(e){console.error('renderFilterBar:',e);}try{renderList();}catch(e){console.error('renderList:',e);}try{updateShopBadge();}catch(e){}}
 function changeQty(id,delta){const it=items.find(i=>i.id===id);if(!it)return;const f=it.type==='bereid'?'porties':'qty';it[f]=Math.max(0,(it[f]||0)+delta);if(it[f]===0){if(!confirm('Verwijder "'+it.naam+'"?')){it[f]=1;}else items=items.filter(i=>i.id!==id);}save();renderAll();}
 async function deleteItem(id){const it=items.find(i=>i.id===id);if(!it)return;if(confirm('Verwijder "'+it.naam+'"?')){items=items.filter(i=>i.id!==id);renderAll();await deleteAndSync(id);}}
 function toggleNote(id){if(expandedNotes.has(id))expandedNotes.delete(id);else expandedNotes.add(id);renderList();}
@@ -947,6 +1002,12 @@ function locationFields(it){
 // ── Sheet ──
 function openAddSheet(){
   editId=null;
+  // On boodschappen page, focus the shop input instead
+  if(activePage==='boodschappen'){
+    const el=document.getElementById('shop-input');
+    if(el)el.focus();
+    return;
+  }
   // Default to current page's tab
   if(activePage==='overzicht') activeTab='winkel';
   document.getElementById('sheet-title').textContent=activeTab==='winkel'?'🛒 Product toevoegen':'🍳 Gerecht toevoegen';
@@ -984,6 +1045,7 @@ function renderSheetBody(it){
         <div class="field"><label>Eenheid</label><input type="text" id="s-eenheid" value="${it?it.eenheid||'':''}" placeholder="g/ml/st"></div>
         <div class="field"><label>Barcode</label><input type="text" id="s-barcode" value="${it?it.barcode||'':''}" placeholder="optioneel"></div>
       </div>
+      <div class="field"><label>Minimumvoorraad <span style="font-weight:400;color:var(--text3)">(0 = geen melding)</span></label><input type="number" id="s-min" value="${it&&it.min?it.min:0}" min="0" placeholder="0"></div>
       ${loc}
       <div class="field-row">
         <div class="field"><label>Ingevroren op</label><input type="date" id="s-invries" value="${it?it.invries||td:td}"></div>
@@ -1023,10 +1085,34 @@ function renderSheetBody(it){
       <button class="save-btn save-btn-b" onclick="saveSheet('bereid')">${isEdit?'Opslaan':'Toevoegen'}</button>`;
   }
   const fe=document.getElementById('s-foto');
-  if(fe)fe.addEventListener('change',function(){const f=this.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const p=document.getElementById('s-foto-preview');p.src=e.target.result;p.style.display='block';};r.readAsDataURL(f);});
+  if(fe)fe.addEventListener('change',async function(){const f=this.files[0];if(!f)return;const compressed=await compressImage(f);const p=document.getElementById('s-foto-preview');p.src=compressed;p.style.display='block';});
 }
 
 function calcGebruik(){const d=document.getElementById('s-bewaar').value;if(!d)return;const inv=document.getElementById('s-invries').value||today();const dt=new Date(inv);dt.setDate(dt.getDate()+parseInt(d));document.getElementById('s-gebruik').value=dt.toISOString().split('T')[0];}
+
+// ── Foto compressie ──
+async function compressImage(file){
+  return new Promise((resolve)=>{
+    const reader=new FileReader();
+    reader.onload=e=>{
+      const img=new Image();
+      img.onload=()=>{
+        const MAX=800;
+        let w=img.width, h=img.height;
+        if(w>MAX||h>MAX){
+          if(w>h){h=Math.round(h*MAX/w);w=MAX;}
+          else{w=Math.round(w*MAX/h);h=MAX;}
+        }
+        const canvas=document.createElement('canvas');
+        canvas.width=w; canvas.height=h;
+        canvas.getContext('2d').drawImage(img,0,0,w,h);
+        resolve(canvas.toDataURL('image/jpeg',0.75));
+      };
+      img.src=e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
 
 async function saveSheet(type){
   const naam=document.getElementById('s-naam').value.trim();if(!naam){document.getElementById('s-naam').focus();return;}
@@ -1034,12 +1120,13 @@ async function saveSheet(type){
   let item;
   if(type==='winkel'){
     let foto='';const wF=document.getElementById('s-foto').files[0];
-    if(wF)foto=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(wF);});
+    if(wF)foto=await compressImage(wF);
     else{const p=document.getElementById('s-foto-preview');if(p&&p.dataset.url)foto=p.dataset.url;else if(editId){const o=items.find(i=>i.id===editId);if(o)foto=o.foto||'';}}
-    item={type:'winkel',naam,cat:document.getElementById('s-cat').value,qty:parseInt(document.getElementById('s-qty').value)||1,eenheid:document.getElementById('s-eenheid').value.trim(),barcode:document.getElementById('s-barcode').value.trim(),vriezer,lade,foto,invries:document.getElementById('s-invries').value,gebruik:document.getElementById('s-gebruik').value};
+    const minVal=parseInt(document.getElementById('s-min')?.value)||0;
+    item={type:'winkel',naam,cat:document.getElementById('s-cat').value,qty:parseInt(document.getElementById('s-qty').value)||1,eenheid:document.getElementById('s-eenheid').value.trim(),barcode:document.getElementById('s-barcode').value.trim(),min:minVal,vriezer,lade,foto,invries:document.getElementById('s-invries').value,gebruik:document.getElementById('s-gebruik').value};
   }else{
     let foto='';const fF=document.getElementById('s-foto').files[0];
-    if(fF)foto=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsDataURL(fF);});
+    if(fF)foto=await compressImage(fF);
     else if(editId){const o=items.find(i=>i.id===editId);if(o)foto=o.foto||'';}
     item={type:'bereid',naam,cat:document.getElementById('s-cat').value,porties:parseInt(document.getElementById('s-porties').value)||1,portiegrootte:document.getElementById('s-portiegrootte').value.trim(),notitie:document.getElementById('s-notitie').value.trim(),vriezer,lade,foto,invries:document.getElementById('s-invries').value,gebruik:document.getElementById('s-gebruik').value};
   }
@@ -1101,6 +1188,147 @@ async function onBarcode(code){
 
 function showBanner(msg,type){const el=document.getElementById('banner');if(!el)return;el.textContent=msg;el.className='banner '+(type==='ok'?'ok':'err');el.style.display='block';setTimeout(()=>el.style.display='none',4000);}
 
+
+// ── Boodschappenlijst ──
+function getManualShopItems(){try{return JSON.parse(localStorage.getItem('diepvries-shop-manual'))||[];}catch(e){return[];}}
+function saveManualShopItems(arr){localStorage.setItem('diepvries-shop-manual',JSON.stringify(arr));}
+function getCheckedShopItems(){try{return JSON.parse(localStorage.getItem('diepvries-shop-checked'))||[];}catch(e){return[];}}
+function saveCheckedShopItems(arr){localStorage.setItem('diepvries-shop-checked',JSON.stringify(arr));}
+
+function addManualShopItem(){
+  const el=document.getElementById('shop-input');
+  const val=el.value.trim(); if(!val)return;
+  const arr=getManualShopItems();
+  arr.push({id:Date.now().toString(),naam:val});
+  saveManualShopItems(arr);
+  el.value='';
+  renderShopPage();
+  updateShopBadge();
+}
+
+function toggleShopCheck(id){
+  const checked=getCheckedShopItems();
+  const idx=checked.indexOf(id);
+  if(idx>=0)checked.splice(idx,1); else checked.push(id);
+  saveCheckedShopItems(checked);
+  renderShopPage();
+}
+
+function clearCheckedShopItems(){
+  const checked=getCheckedShopItems();
+  const manual=getManualShopItems().filter(i=>!checked.includes(i.id));
+  saveManualShopItems(manual);
+  saveCheckedShopItems([]);
+  renderShopPage();
+  updateShopBadge();
+}
+
+function copyShopList(){
+  const checked=getCheckedShopItems();
+  let lines=[];
+  // Section 1: min voorraad
+  const minItems=items.filter(i=>i.type==='winkel'&&i.min&&i.min>0&&i.qty<i.min);
+  if(minItems.length){
+    lines.push('🔻 Voorraad bijvullen:');
+    minItems.forEach(i=>lines.push('  • '+i.naam+' ('+i.qty+'/'+i.min+')'));
+  }
+  // Section 2: verloopt binnenkort
+  const soonItems=items.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<=7;});
+  if(soonItems.length){
+    lines.push('⚠️ Verloopt binnenkort:');
+    soonItems.forEach(i=>lines.push('  • '+i.naam));
+  }
+  // Section 3: handmatig
+  const manual=getManualShopItems();
+  if(manual.length){
+    lines.push('📝 Extra boodschappen:');
+    manual.forEach(i=>lines.push('  '+(checked.includes(i.id)?'✓ ':'')+i.naam));
+  }
+  if(!lines.length){showBanner('Boodschappenlijst is leeg','err');return;}
+  const text=lines.join('\n');
+  navigator.clipboard.writeText(text).then(()=>showBanner('Gekopieerd naar klembord!','ok')).catch(()=>showBanner('Kopieer handmatig: '+text.slice(0,50)+'...','err'));
+}
+
+function updateShopBadge(){
+  const minCount=items.filter(i=>i.type==='winkel'&&i.min&&i.min>0&&i.qty<i.min).length;
+  const soonCount=items.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<=7;}).length;
+  const manualCount=getManualShopItems().length;
+  const total=minCount+soonCount+manualCount;
+  const badge=document.getElementById('shop-badge');
+  if(badge){badge.style.display=total>0?'inline-flex':'none';badge.textContent=total;}
+}
+
+function renderShopPage(){
+  const el=document.getElementById('shop-content');
+  if(!el)return;
+  const checked=getCheckedShopItems();
+  let html='';
+
+  // Section 1: min voorraad
+  const minItems=items.filter(i=>i.type==='winkel'&&i.min&&i.min>0&&i.qty<i.min);
+  if(minItems.length){
+    html+=`<div class="shop-section"><div class="shop-section-title"><span>🔻</span> Voorraad bijvullen</div>`;
+    minItems.forEach(i=>{
+      const id='min_'+i.id;
+      const isChecked=checked.includes(id);
+      html+=`<div class="shop-item${isChecked?' checked':''}">
+        <input type="checkbox" ${isChecked?'checked':''} onchange="toggleShopCheck('${id}')">
+        <span class="shop-item-name">${i.naam}</span>
+        <span class="shop-item-sub">${i.qty} / min ${i.min}</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // Section 2: verloopt binnenkort
+  const soonItems=items.filter(i=>{const d=getDays(i.gebruik);return d!==null&&d<=7;});
+  if(soonItems.length){
+    html+=`<div class="shop-section"><div class="shop-section-title"><span>⚠️</span> Verloopt binnenkort</div>`;
+    soonItems.forEach(i=>{
+      const id='soon_'+i.id;
+      const isChecked=checked.includes(id);
+      const dg=getDays(i.gebruik);
+      const sub=dg<0?`Verlopen ${Math.abs(dg)}d`:`Nog ${dg}d`;
+      html+=`<div class="shop-item${isChecked?' checked':''}">
+        <input type="checkbox" ${isChecked?'checked':''} onchange="toggleShopCheck('${id}')">
+        <span class="shop-item-name">${i.naam}</span>
+        <span class="shop-item-sub">${sub}</span>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // Section 3: handmatige items
+  const manual=getManualShopItems();
+  if(manual.length){
+    html+=`<div class="shop-section"><div class="shop-section-title"><span>📝</span> Extra boodschappen</div>`;
+    manual.forEach(i=>{
+      const isChecked=checked.includes(i.id);
+      html+=`<div class="shop-item${isChecked?' checked':''}">
+        <input type="checkbox" ${isChecked?'checked':''} onchange="toggleShopCheck('${i.id}')">
+        <span class="shop-item-name">${i.naam}</span>
+        <button onclick="removeManualShopItem('${i.id}')" style="background:none;border:none;color:var(--text3);cursor:pointer;font-size:14px;padding:0 4px">✕</button>
+      </div>`;
+    });
+    html+=`</div>`;
+  }
+
+  if(!minItems.length&&!soonItems.length&&!manual.length){
+    html=`<div class="shop-empty">✅ Je boodschappenlijst is leeg!</div>`;
+  }
+
+  el.innerHTML=html;
+}
+
+function removeManualShopItem(id){
+  const arr=getManualShopItems().filter(i=>i.id!==id);
+  saveManualShopItems(arr);
+  const checked=getCheckedShopItems().filter(c=>c!==id);
+  saveCheckedShopItems(checked);
+  renderShopPage();
+  updateShopBadge();
+}
+
 // ── Boot ──
 async function boot(){
   const stored=localStorage.getItem('diepvries-session');
@@ -1150,7 +1378,8 @@ window.addEventListener('popstate', function(e){
   if(scannerOpen){ closeScanner(); history.pushState(null,''); return; }
   if(settingsOpen){ closeSettings(); history.pushState(null,''); return; }
   if(sheetOpen){ document.getElementById('sheet-overlay').classList.remove('open'); history.pushState(null,''); return; }
-  // Nothing open — allow normal back behaviour (but push state to prevent exit)
+  // If on a sub-page, go back to overview
+  if(activePage&&activePage!=='overzicht'){ switchPage('overzicht'); history.pushState(null,''); return; }
   history.pushState(null,'');
 });
 // Push initial state so first back press is caught
